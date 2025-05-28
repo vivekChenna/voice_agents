@@ -30,6 +30,9 @@ try {
   fse.copySync(sourcePath, destinationPath);
   console.log(`Folder copied successfully as: ${copiedChildFolder}`);
 
+  // Modify the Dockerfile port
+  modifyDockerfilePort(destinationPath, 9077, 9051);
+
   // Initialize git in the new folder
   const git = simpleGit(destinationPath);
 
@@ -37,6 +40,38 @@ try {
   pushToGitHub(git, copiedChildFolder);
 } catch (error) {
   console.error("Error in operation:", error);
+}
+
+function modifyDockerfilePort(folderPath, oldPort, newPort) {
+  const dockerfilePath = path.join(folderPath, "Dockerfile");
+  
+  try {
+    // Check if Dockerfile exists
+    if (!fse.existsSync(dockerfilePath)) {
+      console.log("Dockerfile not found, skipping port modification");
+      return;
+    }
+
+    // Read the Dockerfile content
+    let dockerfileContent = fse.readFileSync(dockerfilePath, "utf8");
+    
+    // Replace the EXPOSE port
+    const oldExposePattern = new RegExp(`EXPOSE\\s+${oldPort}`, "g");
+    const newExposeStatement = `EXPOSE ${newPort}`;
+    
+    if (dockerfileContent.match(oldExposePattern)) {
+      dockerfileContent = dockerfileContent.replace(oldExposePattern, newExposeStatement);
+      
+      // Write the modified content back to the file
+      fse.writeFileSync(dockerfilePath, dockerfileContent, "utf8");
+      console.log(`Successfully changed EXPOSE port from ${oldPort} to ${newPort} in Dockerfile`);
+    } else {
+      console.log(`Port ${oldPort} not found in Dockerfile EXPOSE statement`);
+    }
+    
+  } catch (error) {
+    console.error("Error modifying Dockerfile:", error);
+  }
 }
 
 async function pushToGitHub(git, folderName) {
@@ -65,7 +100,7 @@ async function pushToGitHub(git, folderName) {
 
     // Commit changes
     console.log("Committing changes...");
-    await git.commit(`Add ${folderName}`);
+    await git.commit(`Add ${folderName} with port updated to 9078`);
 
     // Push to remote repository
     console.log("Pushing to GitHub...");
